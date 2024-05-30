@@ -44,6 +44,8 @@ function Herosection(props) {
           setstorage={props.setstorage}
           sharedtoggle={props.sharedtoggle}
           popupvisible={props.popupvisible}
+          setfilefolder={props.setfilefolder}
+          setfilevalue={props.setfilevalue}
         />
       )}
     </div>

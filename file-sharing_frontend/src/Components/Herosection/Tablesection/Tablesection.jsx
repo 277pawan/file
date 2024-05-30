@@ -31,46 +31,15 @@ export default function Tablesection(props) {
   const userzimage = Usestore((state) => state.userimage);
   const [adduser, setadduser] = React.useState([]);
   const [userdata, setuserdata] = React.useState("");
+  const [selectedFolder, setSelectedFolder] = React.useState(null);
   const [emails, setEmails] = React.useState([]);
   const [emailtoogle, setemailtoogle] = React.useState(false);
   const [prevFilesLength, setPrevFilesLength] = React.useState(0);
   const [previewdata, setpreviewdata] = React.useState([]);
-  const [renametoogle, setrenameToogle] = React.useState(false);
   const [preview, setpreview] = React.useState(false);
   const [commentvalue, setcommentvalue] = React.useState("");
   const [commentdata, setcommentdata] = React.useState("");
-  const [newFileName, setnewFileName] = React.useState("");
-  const [oldfilename, setoldfilename] = React.useState("");
   const folderstructure = props.folderstructure;
-  const handlerenamecloseform = () => {
-    setrenameToogle(!renametoogle);
-  };
-  const handleRenameFunction = async (e) => {
-    e.preventDefault();
-    console.log(oldfilename);
-    const token = Cookies.get("token");
-    const body = {
-      oldFileName: oldfilename,
-      newFileName,
-    };
-    const response = await fetch(
-      "http://localhost:4000/imgupload/rename-file",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(body),
-      }
-    );
-    const data = await response.json();
-    if (!response.ok) {
-      console.error("Failed to fetch the data");
-    }
-    toast.success("File renamed successfully.");
-    console.log(data);
-  };
   function downloadFunction(url) {
     fetch(url)
       .then((response) => response.blob())
@@ -196,16 +165,25 @@ export default function Tablesection(props) {
       console.error(error.message);
     }
   };
-  const collectKeys = (obj, keys = []) => {
-    for (let key in obj) {
-      keys.push(key);
-      collectKeys(obj[key], keys);
+  const collectKeysIterative = (obj) => {
+    const keys = [];
+    const stack = [{ currentObj: obj, parentKey: null }];
+
+    while (stack.length) {
+      const { currentObj, parentKey } = stack.pop();
+
+      for (let key in currentObj) {
+        keys.push(key);
+        if (typeof currentObj[key] === "object" && currentObj[key] !== null) {
+          stack.push({ currentObj: currentObj[key], parentKey: key });
+        }
+      }
     }
+
     return keys;
   };
 
-  const keys = collectKeys(folderstructure);
-
+  const keys = collectKeysIterative(folderstructure);
   const handleToggle = (index) => {
     if (toggleRowIndex === index) {
       setToggleRowIndex(null);
@@ -357,12 +335,21 @@ export default function Tablesection(props) {
     return;
   };
   React.useEffect(() => {
-    if (filesdata && filesdata.length === 5) {
+    if (filesdata && filesdata.length > 0) {
       const newSize = filesdata.reduce((total, file) => total + file.size, 0);
       props.setstorage(newSize);
       setPrevFilesLength(filesdata.length);
     }
   }, [filesdata, prevFilesLength]);
+  const handleFolderClick = (folder) => {
+    setSelectedFolder(folder);
+  };
+  const handlesavefileFunction = (filevalue) => {
+    props.setfilefolder(selectedFolder);
+    props.setfilevalue(filevalue);
+    setsavetoogle(!savetoogle);
+    toast.success("File Saved Successfully");
+  };
   return (
     <>
       <div className={props.popupvisible ? "" : "Tablesection--title"}>
@@ -558,19 +545,12 @@ export default function Tablesection(props) {
                             <hr />
                             <p
                               className="table--p--text"
-                              onClick={() => setsavetoogle(!savetoogle)}
-                            >
-                              Save
-                            </p>
-                            <hr />
-                            <p
-                              className="table--p--text"
                               onClick={() => {
-                                setrenameToogle(!renametoogle);
-                                setoldfilename(row.fileName);
+                                setsavetoogle(!savetoogle);
+                                setsharedata(row.fileName);
                               }}
                             >
-                              Rename
+                              Save
                             </p>
                             <hr />
                             <p
@@ -632,44 +612,7 @@ export default function Tablesection(props) {
           </TableBody>
         </Table>
       </TableContainer>
-      {renametoogle ? (
-        <>
-          pawan
-          <div className="share__container">
-            <div
-              className="share--close--button"
-              onClick={handlerenamecloseform}
-            >
-              <MdOutlineClose />
-            </div>
-            <p className="share--title">Rename Your File</p>
-            <p>
-              Lorem, ipsum dolor sit amet consectetur adipisicing elit.
-              Inventore provident quibusdam beatae voluptatibus sint culp
-            </p>
-            <form onSubmit={handleRenameFunction}>
-              <div className="rename--container">
-                <input
-                  className="search--bar--share"
-                  placeholder="Enter your New filename..."
-                  type="text"
-                  value={newFileName}
-                  onChange={(e) => setnewFileName(e.target.value)}
-                  required
-                />
-              </div>
-              <button
-                onClick={() => handleRenameFunction}
-                className="share--button"
-              >
-                Rename...
-              </button>
-            </form>
-          </div>
-        </>
-      ) : (
-        <></>
-      )}
+
       {savetoogle ? (
         <div className="save__container">
           <div className="files--close" onClick={handleCloseForm}>
@@ -681,7 +624,12 @@ export default function Tablesection(props) {
             to save.
           </p>
           <p className="save--title">Select folder to save</p>
-          <form action="">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handlesavefileFunction(sharedata);
+            }}
+          >
             <div
               style={{
                 display: "flex",
@@ -691,9 +639,19 @@ export default function Tablesection(props) {
                 justifyContent: "center",
               }}
             >
-              {keys.map((key, index) => (
-                <div key={index} className="save--button">
-                  {key}
+              {keys.map((data) => (
+                <div
+                  key={data.id}
+                  className="save--button"
+                  style={{
+                    backgroundColor:
+                      selectedFolder === data
+                        ? "rgba(0, 198, 73, 0.70)"
+                        : "rgb(0, 140, 255)",
+                  }}
+                  onClick={() => handleFolderClick(data)}
+                >
+                  {data}
                 </div>
               ))}
             </div>

@@ -14,14 +14,17 @@ function Main() {
   const [isPreviewVisible, setIsPreviewVisible] = useState(false);
   const [navbardata, setnavbardata] = useState("");
   const [comment, setcomment] = useState(false);
-  const [storage, setstorage] = React.useState(0);
+  const [storage, setstorage] = useState(0);
   const [sharedtoggle, setsharedtoggle] = useState(false);
   const [filedata, setfiledata] = useState([]);
   const [popupvisible, setpopupvisible] = useState(false);
+  const [filefolder, setfilefolder] = useState("");
+  const [filevalue, setfilevalue] = useState("");
   const [popupdata, setpopupdata] = useState("");
   const [commentdata, setcommentdata] = useState("");
   const token = cookies.get("token");
   const isInitialMount = useRef(true);
+
   // Fetch folder data when the component mounts
   useEffect(() => {
     const fetchFolderData = async () => {
@@ -88,17 +91,6 @@ function Main() {
     setCurrentPath(path);
   };
 
-  // Get the last nested object in a given object
-  const getLastNestedObject = (obj, path = []) => {
-    if (Object.keys(obj).length === 0) {
-      return path;
-    }
-    const keys = Object.keys(obj);
-    const lastKey = keys[keys.length - 1];
-    const newPath = [...path, lastKey];
-    return getLastNestedObject(obj[lastKey], newPath);
-  };
-
   // Create a new folder in the current path
   const createNewFolder = (newFolderName) => {
     if (currentPath.length > 7) {
@@ -130,16 +122,19 @@ function Main() {
     setPreviewData(data);
     setIsPreviewVisible(!isPreviewVisible);
   };
+
   const popupsection = (data) => {
     setpopupdata(data);
     setpopupvisible(!popupvisible);
     console.log(popupvisible);
   };
+
   const commentpreviewsection = (data) => {
     setcomment(!comment);
     setPreviewData(data);
     setIsPreviewVisible(!isPreviewVisible);
   };
+
   useEffect(() => {
     if (navbardata) {
       console.log(navbardata);
@@ -148,6 +143,66 @@ function Main() {
       setIsPreviewVisible(false); // Hide the preview section
     }
   }, [navbardata]);
+
+  // Function to save filevalue inside the correct folder
+  const saveFileValueInFolder = (folderPath, fileValue) => {
+    setFolderStructure((prevStructure) => {
+      const newStructure = { ...prevStructure };
+      let currentLevel = newStructure;
+
+      folderPath.forEach((folder, index) => {
+        if (!currentLevel[folder]) {
+          currentLevel[folder] = {};
+        }
+        if (index === folderPath.length - 1) {
+          // Last folder in the path
+          if (!Array.isArray(currentLevel[folder])) {
+            currentLevel[folder] = [fileValue];
+          } else {
+            currentLevel[folder].push(fileValue);
+          }
+        } else {
+          currentLevel = currentLevel[folder];
+        }
+      });
+
+      return newStructure;
+    });
+  };
+
+  // Save filevalue in the corresponding folder
+  useEffect(() => {
+    if (filefolder && filevalue) {
+      const folderPath = filefolder.split("/");
+      console.log(folderPath);
+      searchKeyInObject(folderStructure, filefolder, filevalue);
+    }
+  }, [filefolder, filevalue]);
+  const searchKeyInObject = (obj, keyToFind, filevalue, currentPath = []) => {
+    for (let key in obj) {
+      if (key === keyToFind) {
+        console.log("Found key:", keyToFind, "at path:", [...currentPath, key]);
+        console.log(obj);
+        obj[key][`${Date.now()}-${Math.floor(Math.random() * 1000)}`] =
+          filevalue;
+        return;
+      }
+
+      if (typeof obj[key] === "object" && obj[key] !== null) {
+        searchKeyInObject(obj[key], keyToFind, filevalue, [
+          ...currentPath,
+          key,
+        ]);
+        // Check if the key was found in the child object and stop the loop if so
+        if (obj[filevalue]) {
+          return;
+        }
+      }
+    }
+    console.log(obj);
+  };
+
+  console.log(folderStructure);
   return (
     <div className="Main__container">
       <Sidebar
@@ -158,6 +213,7 @@ function Main() {
         storage={storage}
         setsharedtoggle={setsharedtoggle}
         popupvisible={popupvisible}
+        filefolder={filefolder}
       />
       <Herosection
         folderstructure={folderStructure}
@@ -169,11 +225,13 @@ function Main() {
         setcomment={setcomment}
         setstorage={setstorage}
         sharedtoggle={sharedtoggle}
+        setfilefolder={setfilefolder}
         setfiledata={setfiledata}
         filedata={filedata}
         popupsection={popupsection}
         popupvisible={popupvisible}
         commentdata={commentdata}
+        setfilevalue={setfilevalue}
       />
       <Preview
         visibility={isPreviewVisible}

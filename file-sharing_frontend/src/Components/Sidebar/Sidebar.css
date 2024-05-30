@@ -18,6 +18,9 @@
     height: 8%;
     background-color: #3093da;
 }
+.hidden-label {
+    display: none;
+  }
 .Files__container{
     display: flex;
     flex-direction: column;
@@ -108,6 +111,7 @@
     font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
     font-size: 13px;
     color: white;
+    font-weight: 600;
 }
 .ul--list{
     list-style-type: none;

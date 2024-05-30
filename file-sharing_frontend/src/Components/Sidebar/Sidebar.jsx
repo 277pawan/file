@@ -83,6 +83,7 @@ function Sidebar({
   storage,
   setsharedtoggle,
   popupvisible,
+  filefolder,
 }) {
   const [newFolderName, setNewFolderName] = useState("");
   const handleCreateFolder = (e) => {
@@ -93,6 +94,8 @@ function Sidebar({
     }
   };
   const currentsize = storage / 1024 / 100;
+  console.log("storage" + storage);
+  console.log(currentsize);
   const totalsize = 100;
   const handleClick = (path, folderName, content) => {
     onFolderClick(path, folderName, content);
@@ -154,9 +157,10 @@ function Sidebar({
               bgColor="#79b6e2"
               height="12px"
               isLabelVisible="false"
+              labelClassName="hidden-label"
             />
             <p className="footer__text">
-              You have used {Math.floor(currentsize)} out of 100MB.
+              You have used {Math.floor(currentsize)}MB out of 100MB.
             </p>
           </div>
         </div>
